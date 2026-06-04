@@ -5,6 +5,7 @@ interface User {
   _id: string;
   name: string;
   email: string;
+  phone?: string;
   role: 'admin' | 'manager' | 'staff' | 'viewer';
   avatar?: string;
   isEmailVerified: boolean;
