@@ -22,11 +22,23 @@ export default function RegisterPage() {
     setLoading(false);
   };
 
-  const features = [
-    { icon: BarChart3, title: 'Live Analytics', desc: 'Real-time dashboards & reports' },
-    { icon: Shield,    title: 'Secure & Safe',  desc: 'JWT + 2FA authentication' },
-    { icon: Users,     title: 'Team Roles',     desc: 'Admin, Manager, Staff, Viewer' },
-  ];
+ const features = [
+  {
+    icon: BarChart3,
+    title: 'Inventory Insights',
+    desc: 'Track stock movement and make informed business decisions.'
+  },
+  {
+    icon: Shield,
+    title: 'Secure Access',
+    desc: 'Your business data is protected with modern security standards.'
+  },
+  {
+    icon: Users,
+    title: 'Work Together',
+    desc: 'Collaborate with your team and manage operations efficiently.'
+  },
+];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-violet-50/30 to-blue-50/20 flex items-center justify-center p-6">
@@ -42,7 +54,7 @@ export default function RegisterPage() {
           </div>
           <h1 className="text-3xl font-bold text-gray-900">Create your account</h1>
           <p className="text-gray-500 mt-2">
-            {`First user becomes Admin automatically. Others start as Staff.`}
+            {`Start managing your inventory, products and business operations from one place.`}
           </p>
         </div>
 
@@ -54,7 +66,7 @@ export default function RegisterPage() {
               <div>
                 <label className="label">Full Name</label>
                 <input className={`input ${errors.name ? 'border-red-400' : ''}`}
-                  placeholder="John Doe"
+                  placeholder="Abhay Sharma"
                   {...register('name', { required: 'Name is required', minLength: { value: 2, message: 'Min 2 characters' } })} />
                 {errors.name && <p className="mt-1.5 text-xs text-red-500">⚠ {errors.name.message as string}</p>}
               </div>
@@ -95,11 +107,15 @@ export default function RegisterPage() {
 
               {/* Role info */}
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5">
-                <p className="text-xs font-semibold text-amber-800 mb-1">🎯 How roles work</p>
-                <p className="text-xs text-amber-700 leading-relaxed">
-                  The <strong>first person</strong> to register becomes <strong>Admin</strong> and can assign roles to everyone else from the Users page. Subsequent signups get <strong>Staff</strong> role.
+               <p className="text-xs font-semibold text-amber-800 mb-1">
+               💡 Getting Started
                 </p>
-              </div>
+
+           <p className="text-xs text-amber-700 leading-relaxed">
+             Create your account to access inventory tracking, product management,
+    supplier records, reporting tools and business insights.
+  </p>
+</div>
 
               <button type="submit" disabled={loading} className="btn-primary w-full justify-center py-3 text-base mt-2">
                 {loading
@@ -128,16 +144,17 @@ export default function RegisterPage() {
                 </div>
               </div>
             ))}
+          <div className="card p-5 bg-gradient-to-br from-violet-600 to-indigo-700 border-0">
+  <p className="text-white font-semibold text-sm mb-1">
+    📦 Smarter Inventory Management
+  </p>
 
-            <div className="card p-5 bg-gradient-to-br from-violet-600 to-indigo-700 border-0">
-              <p className="text-white font-semibold text-sm mb-1">🚀 Quick Setup</p>
-              <p className="text-violet-200 text-xs leading-relaxed">
-                After registering, run the seed script to populate demo data and explore all features instantly.
-              </p>
-              <code className="mt-2 block text-xs text-violet-200 font-mono bg-black/20 rounded-lg px-3 py-2">
-                node database/seeds/index.js
-              </code>
-            </div>
+  <p className="text-violet-200 text-xs leading-relaxed">
+    Monitor stock levels, manage suppliers, track transactions and
+    streamline your daily operations from a single dashboard.
+  </p>
+</div>
+            
           </div>
         </div>
       </div>
