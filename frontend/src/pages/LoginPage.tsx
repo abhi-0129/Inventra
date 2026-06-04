@@ -167,13 +167,6 @@ export default function LoginPage() {
                 </button>
               </form>
 
-              <div className="mt-4 p-4 bg-violet-50 rounded-xl border border-violet-100">
-                <p className="text-xs text-violet-700 font-medium mb-1">🔑 Default Admin Credentials</p>
-                <p className="text-xs text-violet-600">Email: <span className="font-mono font-bold">admin@inventra.io</span></p>
-                <p className="text-xs text-violet-600">Password: <span className="font-mono font-bold">Admin@1234</span></p>
-                <p className="text-xs text-violet-500 mt-1">(Run the seed script first to create admin)</p>
-              </div>
-
               <p className="text-center text-sm text-gray-500 mt-5">
                 Don't have an account?{' '}
                 <Link to="/register" className="text-violet-600 hover:text-violet-700 font-semibold">
