@@ -148,11 +148,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-
-// Expose OTP methods on authApi for the settings page
-declare module '../services/api' {
-  interface AuthApiExt {
-    setupOTP: () => Promise<any>;
-    disableOTP: () => Promise<any>;
-  }
-}
