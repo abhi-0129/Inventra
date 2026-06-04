@@ -56,8 +56,8 @@ export default function ProductModal({ product, onClose, onSuccess }: Props) {
               </div>
             ))}
             {[
-              { name: 'costPrice',    label: 'Cost Price ($)',   placeholder: '999.00' },
-              { name: 'sellingPrice', label: 'Selling Price ($)', placeholder: '1299.00' },
+              { name: 'costPrice',    label: 'Cost Price (₹)',   placeholder: '999.00' },
+              { name: 'sellingPrice', label: 'Selling Price (₹)', placeholder: '1299.00' },
               { name: 'quantity',     label: 'Initial Quantity', placeholder: '0' },
               { name: 'minStockLevel', label: 'Min Stock Level', placeholder: '10' },
               { name: 'reorderPoint', label: 'Reorder Point',    placeholder: '20' },

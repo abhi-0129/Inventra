@@ -54,7 +54,7 @@ export default function InventoryPage() {
       const res = await reportApi.exportInventoryPDF();
       const url = URL.createObjectURL(new Blob([res.data]));
       const a = document.createElement('a'); a.href = url;
-      a.download = `inventory-${Date.now()}.pdf`; a.click();
+      a.download = `inventory- ₹{Date.now()}.pdf`; a.click();
       toast.success('PDF downloaded.', { id: t });
     } catch { toast.error('Export failed.', { id: t }); }
   };

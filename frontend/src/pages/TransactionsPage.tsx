@@ -99,8 +99,8 @@ export default function TransactionsPage() {
                       {isDecrease ? '-' : '+'}{tx.quantity}
                     </td>
                     <td className="text-gray-800 font-medium">{tx.quantityAfter}</td>
-                    <td className="text-gray-500">{tx.unitPrice > 0 ? `$${tx.unitPrice.toFixed(2)}` : '—'}</td>
-                    <td className="text-gray-800">{tx.totalAmount > 0 ? `$${tx.totalAmount.toFixed(2)}` : '—'}</td>
+                    <td className="text-gray-500">{tx.unitPrice > 0 ? ` ₹${tx.unitPrice.toFixed(2)}` : '—'}</td>
+                    <td className="text-gray-800">{tx.totalAmount > 0 ? ` ₹${tx.totalAmount.toFixed(2)}` : '—'}</td>
                     <td className="text-gray-400 text-xs">{tx.reference || '—'}</td>
                     <td className="text-gray-500 text-xs">{tx.performedBy?.name || '—'}</td>
                   </tr>

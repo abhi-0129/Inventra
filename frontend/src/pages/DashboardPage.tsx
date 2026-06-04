@@ -96,8 +96,8 @@ export default function DashboardPage() {
         <StatCard icon={AlertTriangle} label="Low Stock Items"   value={stats.lowStockCount ?? 0}
           sub={`${stats.outOfStockCount ?? 0} out of stock`} iconBg="bg-amber-50" iconColor="text-amber-600" />
         <StatCard icon={DollarSign}    label="Inventory Value"
-          value={stats.totalCostValue ? `$${(stats.totalCostValue/1000).toFixed(1)}k` : '$0'}
-          sub={`Retail $${stats.totalRetailValue ? (stats.totalRetailValue/1000).toFixed(1) : 0}k`}
+          value={stats.totalCostValue ? ` ₹${(stats.totalCostValue/1000).toFixed(1)}k` : '$0'}
+          sub={`Retail  ₹${stats.totalRetailValue ? (stats.totalRetailValue/1000).toFixed(1) : 0}k`}
           iconBg="bg-emerald-50" iconColor="text-emerald-600" />
       </div>
 

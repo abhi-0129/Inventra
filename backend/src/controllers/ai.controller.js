@@ -71,7 +71,7 @@ Product: ${product.name} (SKU: ${product.sku})
 Current Stock: ${product.quantity} ${product.unit}
 Min Stock Level: ${product.minStockLevel}
 Reorder Point: ${product.reorderPoint}
-Cost Price: $${product.costPrice}
+Cost Price:  ₹${product.costPrice}
 Category: ${product.category?.name}
 
 Last 90 days sales: ${JSON.stringify(salesData)}

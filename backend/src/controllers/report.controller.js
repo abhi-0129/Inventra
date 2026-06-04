@@ -4,7 +4,7 @@ const Product = require('../models/Product');
 const Transaction = require('../models/Transaction');
 const catchAsync = require('../utils/catchAsync');
 
-const formatCurrency = (n) => `$${Number(n || 0).toFixed(2)}`;
+const formatCurrency = (n) => ` ₹${Number(n || 0).toFixed(2)}`;
 const formatDate = (d) => new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 
 exports.exportInventoryPDF = catchAsync(async (req, res) => {

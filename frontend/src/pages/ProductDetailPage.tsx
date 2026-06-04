@@ -115,8 +115,8 @@ export default function ProductDetailPage() {
         {[
           { label: 'Current Stock', value: `${product.quantity} ${product.unit}`, color: stockStatusColor(product.quantity, product.minStockLevel) },
           { label: 'Min Stock Level', value: `${product.minStockLevel} ${product.unit}`, color: 'text-gray-800' },
-          { label: 'Cost Price', value: `$${product.costPrice?.toFixed(2)}`, color: 'text-gray-800' },
-          { label: 'Selling Price', value: `$${product.sellingPrice?.toFixed(2)}`, color: 'text-green-400' },
+          { label: 'Cost Price', value: ` ₹${product.costPrice?.toFixed(2)}`, color: 'text-gray-800' },
+          { label: 'Selling Price', value: ` ₹${product.sellingPrice?.toFixed(2)}`, color: 'text-green-400' },
         ].map(({ label, value, color }) => (
           <div key={label} className="card p-4">
             <p className="text-xs text-gray-500 mb-1">{label}</p>
@@ -139,7 +139,7 @@ export default function ProductDetailPage() {
               { label: 'Reorder Point', value: `${product.reorderPoint} ${product.unit}` },
               { label: 'Max Stock', value: `${product.maxStockLevel} ${product.unit}` },
               { label: 'Profit Margin', value: `${product.profitMargin}%` },
-              { label: 'Stock Value', value: `$${(product.quantity * product.costPrice).toFixed(2)}` },
+              { label: 'Stock Value', value: ` ₹${(product.quantity * product.costPrice).toFixed(2)}` },
               { label: 'Status', value: product.isActive ? 'Active' : 'Inactive' },
             ].map(({ label, value }) => (
               <div key={label} className="flex justify-between">
