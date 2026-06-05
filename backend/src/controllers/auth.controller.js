@@ -27,34 +27,64 @@ exports.register = catchAsync(async (req, res, next) => {
 
   const userCount = await User.countDocuments();
   const assignedRole = userCount === 0 ? 'admin' : 'viewer';
+  const isAdmin = assignedRole === 'admin';
 
-  // Generate verification token
-  const verificationToken = crypto.randomBytes(32).toString('hex');
-  const verificationExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+  // Admin gets verified immediately, others need email verification
+  const verificationToken = isAdmin ? null : crypto.randomBytes(32).toString('hex');
+  const verificationExpiry = isAdmin ? null : new Date(Date.now() + 24 * 60 * 60 * 1000);
 
   const user = await User.create({
     name, email, password, phone,
     role: assignedRole,
+    isEmailVerified: isAdmin,
     emailVerificationToken: verificationToken,
     emailVerificationExpiry: verificationExpiry,
-    isEmailVerified: false,
   });
 
-  // Send verification email
-  try {
-    await emailService.sendVerificationEmail(user, verificationToken);
-  } catch (err) {
-    logger.error('Verification email failed:', err.message);
+  // Send verification email only to non-admin users
+  if (!isAdmin) {
+    try {
+      await emailService.sendVerificationEmail(user, verificationToken);
+      logger.info(`Verification email sent to ${email}`);
+    } catch (err) {
+      logger.error('Verification email failed:', err.message);
+    }
   }
 
   logger.info(`New user registered: ${email} as ${assignedRole}`);
 
   res.status(201).json({
     success: true,
-    message: userCount === 0
-      ? 'Admin account created! Please verify your email.'
-      : 'Registration successful! Please check your email to verify your account.',
+    message: isAdmin
+      ? 'Admin account created! You can now log in.'
+      : 'Registration successful! Please check your email to verify your account before logging in.',
     data: { userId: user._id, role: assignedRole },
+  });
+});
+
+// ✅ NEW: Verify email route handler
+exports.verifyEmail = catchAsync(async (req, res, next) => {
+  const { token } = req.query;
+  if (!token) return next(new AppError('Verification token is missing.', 400));
+
+  const user = await User.findOne({
+    emailVerificationToken: token,
+    emailVerificationExpiry: { $gt: Date.now() },
+  });
+
+  if (!user) return next(new AppError('Invalid or expired verification link. Please register again.', 400));
+
+  await User.findByIdAndUpdate(user._id, {
+    isEmailVerified: true,
+    emailVerificationToken: null,
+    emailVerificationExpiry: null,
+  });
+
+  logger.info(`Email verified for: ${user.email}`);
+
+  res.status(200).json({
+    success: true,
+    message: 'Email verified successfully! You can now log in.',
   });
 });
 
@@ -67,6 +97,9 @@ exports.login = catchAsync(async (req, res, next) => {
     return next(new AppError('Invalid email or password.', 401));
 
   if (!user.isActive) return next(new AppError('Your account is deactivated. Contact admin.', 403));
+
+  // ✅ NEW: Block login if email not verified
+  if (!user.isEmailVerified) return next(new AppError('Please verify your email before logging in. Check your inbox.', 403));
 
   if (user.otpEnabled) {
     const otp = totp.generate(user.otpSecret);
