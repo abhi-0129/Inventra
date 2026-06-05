@@ -65,6 +65,8 @@ export const authApi = {
   getMe: () => api.get('/auth/me'),
   forgotPassword: (email: string) => api.post('/auth/forgot-password', { email }),
   resetPassword: (token: string, password: string) => api.patch(`/auth/reset-password/${token}`, { password }),
+  setupOTP: () => api.post('/auth/setup-otp'),
+  disableOTP: () => api.post('/auth/disable-otp'),
 };
 
 export const productApi = {
