@@ -25,19 +25,35 @@ exports.register = catchAsync(async (req, res, next) => {
   const existingUser = await User.findOne({ email });
   if (existingUser) return next(new AppError('An account with this email already exists.', 409));
 
-  // ✅ First user in system = admin automatically
   const userCount = await User.countDocuments();
   const assignedRole = userCount === 0 ? 'admin' : 'viewer';
 
-  const user = await User.create({ name, email, password, phone, role: assignedRole });
+  // Generate verification token
+  const verificationToken = crypto.randomBytes(32).toString('hex');
+  const verificationExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+  const user = await User.create({
+    name, email, password, phone,
+    role: assignedRole,
+    emailVerificationToken: verificationToken,
+    emailVerificationExpiry: verificationExpiry,
+    isEmailVerified: false,
+  });
+
+  // Send verification email
+  try {
+    await emailService.sendVerificationEmail(user, verificationToken);
+  } catch (err) {
+    logger.error('Verification email failed:', err.message);
+  }
 
   logger.info(`New user registered: ${email} as ${assignedRole}`);
 
   res.status(201).json({
     success: true,
     message: userCount === 0
-      ? 'Admin account created! You can now log in.'
-      : 'Registration successful! An admin will assign your role.',
+      ? 'Admin account created! Please verify your email.'
+      : 'Registration successful! Please check your email to verify your account.',
     data: { userId: user._id, role: assignedRole },
   });
 });
