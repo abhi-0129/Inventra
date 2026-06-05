@@ -128,3 +128,18 @@ const sendMail = async ({ to, subject, html }) => {
     throw error;
   }
 };
+
+// ✅ NEW: Send 6-digit OTP for email verification during signup
+exports.sendEmailVerificationOTP = async (user, otp) => {
+  const html = baseTemplate(`
+    <p>Hi there,</p>
+    <p>Use the code below to verify your email address for Inventra:</p>
+    <div class="otp-box">
+      <div class="otp-code">${otp}</div>
+      <div class="otp-label">Expires in 10 minutes</div>
+    </div>
+    <p>If you did not request this, please ignore this email.</p>
+  `);
+  await sendMail({ to: user.email, subject: 'Your Inventra Email Verification Code', html });
+  logger.info(`Email verification OTP sent to ${user.email}`);
+};

@@ -19,72 +19,80 @@ const createSendToken = (user, statusCode, res) => {
   res.status(statusCode).json({ success: true, token, refreshToken, data: { user } });
 };
 
+// ✅ STEP 1: Send OTP to email before registration
+exports.sendEmailOTP = catchAsync(async (req, res, next) => {
+  const { email } = req.body;
+  if (!email) return next(new AppError('Email is required.', 400));
+
+  const existingUser = await User.findOne({ email });
+  if (existingUser) return next(new AppError('An account with this email already exists.', 409));
+
+  // Generate 6-digit OTP
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+  // Store OTP temporarily in a pending collection or as a temp token
+  // We use a signed JWT to store OTP securely
+  const otpToken = jwt.sign(
+    { email, otp, expiry: expiry.getTime() },
+    process.env.JWT_SECRET,
+    { expiresIn: '10m' }
+  );
+
+  // Send OTP email
+  try {
+    await emailService.sendEmailVerificationOTP({ email }, otp);
+    logger.info(`Email OTP sent to ${email}`);
+  } catch (err) {
+    logger.error('OTP email failed:', err.message);
+    return next(new AppError('Failed to send OTP. Please check your email and try again.', 500));
+  }
+
+  res.status(200).json({
+    success: true,
+    message: 'OTP sent to your email. Valid for 10 minutes.',
+    otpToken,
+  });
+});
+
+// ✅ STEP 2: Verify OTP then register
 exports.register = catchAsync(async (req, res, next) => {
-  const { name, email, password, phone } = req.body;
+  const { name, email, password, phone, otp, otpToken } = req.body;
+
+  if (!otpToken) return next(new AppError('OTP verification required. Please verify your email first.', 400));
+
+  // Verify OTP token
+  let decoded;
+  try {
+    decoded = jwt.verify(otpToken, process.env.JWT_SECRET);
+  } catch {
+    return next(new AppError('OTP expired. Please request a new one.', 400));
+  }
+
+  if (decoded.email !== email) return next(new AppError('Email mismatch. Please verify again.', 400));
+  if (decoded.otp !== otp) return next(new AppError('Invalid OTP. Please try again.', 400));
+  if (Date.now() > decoded.expiry) return next(new AppError('OTP expired. Please request a new one.', 400));
 
   const existingUser = await User.findOne({ email });
   if (existingUser) return next(new AppError('An account with this email already exists.', 409));
 
   const userCount = await User.countDocuments();
   const assignedRole = userCount === 0 ? 'admin' : 'viewer';
-  const isAdmin = assignedRole === 'admin';
-
-  // Admin gets verified immediately, others need email verification
-  const verificationToken = isAdmin ? null : crypto.randomBytes(32).toString('hex');
-  const verificationExpiry = isAdmin ? null : new Date(Date.now() + 24 * 60 * 60 * 1000);
 
   const user = await User.create({
     name, email, password, phone,
     role: assignedRole,
-    isEmailVerified: isAdmin,
-    emailVerificationToken: verificationToken,
-    emailVerificationExpiry: verificationExpiry,
+    isEmailVerified: true, // Already verified via OTP
   });
-
-  // Send verification email only to non-admin users
-  if (!isAdmin) {
-    try {
-      await emailService.sendVerificationEmail(user, verificationToken);
-      logger.info(`Verification email sent to ${email}`);
-    } catch (err) {
-      logger.error('Verification email failed:', err.message);
-    }
-  }
 
   logger.info(`New user registered: ${email} as ${assignedRole}`);
 
   res.status(201).json({
     success: true,
-    message: isAdmin
+    message: assignedRole === 'admin'
       ? 'Admin account created! You can now log in.'
-      : 'Registration successful! Please check your email to verify your account before logging in.',
+      : 'Account created successfully! You can now log in.',
     data: { userId: user._id, role: assignedRole },
-  });
-});
-
-// ✅ NEW: Verify email route handler
-exports.verifyEmail = catchAsync(async (req, res, next) => {
-  const { token } = req.query;
-  if (!token) return next(new AppError('Verification token is missing.', 400));
-
-  const user = await User.findOne({
-    emailVerificationToken: token,
-    emailVerificationExpiry: { $gt: Date.now() },
-  });
-
-  if (!user) return next(new AppError('Invalid or expired verification link. Please register again.', 400));
-
-  await User.findByIdAndUpdate(user._id, {
-    isEmailVerified: true,
-    emailVerificationToken: null,
-    emailVerificationExpiry: null,
-  });
-
-  logger.info(`Email verified for: ${user.email}`);
-
-  res.status(200).json({
-    success: true,
-    message: 'Email verified successfully! You can now log in.',
   });
 });
 
@@ -97,9 +105,7 @@ exports.login = catchAsync(async (req, res, next) => {
     return next(new AppError('Invalid email or password.', 401));
 
   if (!user.isActive) return next(new AppError('Your account is deactivated. Contact admin.', 403));
-
-  // ✅ NEW: Block login if email not verified
-  if (!user.isEmailVerified) return next(new AppError('Please verify your email before logging in. Check your inbox.', 403));
+  if (!user.isEmailVerified) return next(new AppError('Please verify your email before logging in.', 403));
 
   if (user.otpEnabled) {
     const otp = totp.generate(user.otpSecret);

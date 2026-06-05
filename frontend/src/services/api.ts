@@ -3,9 +3,9 @@ import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/auth.store';
 
 const api = axios.create({
-baseURL: `${import.meta.env.VITE_API_URL}/api`,
-timeout: 60000,
- headers: { 'Content-Type': 'application/json' },
+  baseURL: '/api',
+  timeout: 30000,
+  headers: { 'Content-Type': 'application/json' },
 });
 
 // Request interceptor – attach token
@@ -58,14 +58,13 @@ export default api;
 // ── API helpers ──
 export const authApi = {
   login: (data: { email: string; password: string }) => api.post('/auth/login', data),
+  sendEmailOTP: (email: string) => api.post('/auth/send-email-otp', { email }),
   register: (data: object) => api.post('/auth/register', data),
   verifyOTP: (data: { otp: string; tempToken: string }) => api.post('/auth/verify-otp', data),
   logout: () => api.post('/auth/logout'),
   getMe: () => api.get('/auth/me'),
   forgotPassword: (email: string) => api.post('/auth/forgot-password', { email }),
   resetPassword: (token: string, password: string) => api.patch(`/auth/reset-password/${token}`, { password }),
-  setupOTP: () => api.post('/auth/setup-otp'),
-  disableOTP: () => api.post('/auth/disable-otp'),
 };
 
 export const productApi = {
