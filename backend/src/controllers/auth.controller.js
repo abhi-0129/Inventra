@@ -27,7 +27,7 @@ exports.register = catchAsync(async (req, res, next) => {
 
   // ✅ First user in system = admin automatically
   const userCount = await User.countDocuments();
-  const assignedRole = userCount === 0 ? 'admin' : 'staff';
+  const assignedRole = userCount === 0 ? 'admin' : 'viewer';
 
   const user = await User.create({ name, email, password, phone, role: assignedRole });
 
