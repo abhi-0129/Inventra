@@ -3,8 +3,8 @@ import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/auth.store';
 
 const api = axios.create({
-  baseURL: 'https://inventra-backend-tdgo.onrender.com/api',
-  timeout: 30000,
+  baseURL: import.meta.env.VITE_API_URL || 'https://inventra-backend-tdgo.onrender.com/api',
+  timeout: 60000, // 
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -30,7 +30,6 @@ api.interceptors.response.use(
 
       if (refreshToken) {
         try {
-          // ✅ Fixed: use api instead of axios so baseURL is correct
           const res = await api.post('/auth/refresh-token', { refreshToken });
           const { token } = res.data;
           useAuthStore.getState().setToken(token);
