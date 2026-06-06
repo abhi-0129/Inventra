@@ -1,46 +1,46 @@
+const nodemailer = require('nodemailer');
 const logger = require('../utils/logger');
 
-// Resend SDK — reliable, no SMTP timeouts
-const getResend = () => {
-  const { Resend } = require('resend');
-  return new Resend(process.env.RESEND_API_KEY);
+
+const createTransporter = () => {
+  return nodemailer.createTransport({
+    service: 'gmail',          
+    auth: {
+      user: process.env.SMTP_USER,   
+      pass: process.env.SMTP_PASS,  
+    },
+  });
 };
 
-const FROM = process.env.EMAIL_FROM || 'Inventra <onboarding@resend.dev>';
+const FROM = process.env.EMAIL_FROM || `Inventra <${process.env.SMTP_USER}>`;
 
 // ── Core send ──
 const sendMail = async ({ to, subject, html }) => {
-  if (!process.env.RESEND_API_KEY) {
-    logger.error('RESEND_API_KEY not set in environment variables');
-    throw new Error('Email service not configured. Set RESEND_API_KEY.');
+  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    logger.error('SMTP_USER or SMTP_PASS not set');
+    throw new Error('Email not configured. Set SMTP_USER and SMTP_PASS.');
   }
 
-  const resend = getResend();
-  const { data, error } = await resend.emails.send({
-    from: FROM,
-    to,
-    subject,
-    html,
-  });
+  const transporter = createTransporter();
 
-  if (error) {
-    logger.error('Resend error:', error);
-    throw new Error(error.message || 'Failed to send email');
+  try {
+    const info = await transporter.sendMail({ from: FROM, to, subject, html });
+    logger.info(`Email sent to ${to} | MessageId: ${info.messageId}`);
+    return info;
+  } catch (err) {
+    logger.error(`Email failed to ${to}: ${err.message}`);
+    throw err;
   }
-
-  logger.info(`Email sent via Resend to ${to} | id: ${data?.id}`);
-  return data;
 };
 
 // ── HTML Template ──
-const baseTemplate = (content) => `
-<!DOCTYPE html>
+const baseTemplate = (content) => `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Segoe UI',Arial,sans-serif;background:#f8fafc;color:#1e293b}
+    body{font-family:'Segoe UI',Arial,sans-serif;background:#f8fafc}
     .wrap{max-width:560px;margin:32px auto;padding:0 16px}
     .card{background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.07)}
     .header{background:linear-gradient(135deg,#7c3aed,#6d28d9);padding:28px 32px}
@@ -53,7 +53,7 @@ const baseTemplate = (content) => `
     .otp-label{color:#7c3aed;font-size:12px;margin-top:8px;font-weight:500}
     .btn{display:inline-block;background:#7c3aed;color:#fff!important;text-decoration:none;padding:12px 28px;border-radius:10px;font-weight:600;font-size:14px;margin:8px 0}
     .footer{background:#f8fafc;padding:16px 32px;text-align:center;border-top:1px solid #e2e8f0}
-    .footer p{color:#94a3b8;font-size:11px;line-height:1.6}
+    .footer p{color:#94a3b8;font-size:11px}
     hr{border:none;border-top:1px solid #e2e8f0;margin:18px 0}
   </style>
 </head>
@@ -76,76 +76,79 @@ const baseTemplate = (content) => `
 // ── Email functions ──
 
 exports.sendEmailVerificationOTP = async (user, otp) => {
-  const html = baseTemplate(`
-    <p>Hi there,</p>
-    <p>Use this code to verify your email and complete registration on Inventra:</p>
-    <div class="otp-box">
-      <div class="otp-code">${otp}</div>
-      <div class="otp-label">⏱ Valid for 10 minutes</div>
-    </div>
-    <p style="font-size:13px;color:#94a3b8;">If you didn't request this, ignore this email.</p>
-  `);
   await sendMail({
     to: user.email,
     subject: `${otp} — Your Inventra verification code`,
-    html,
+    html: baseTemplate(`
+      <p>Hi there,</p>
+      <p>Use this code to verify your email and complete your Inventra registration:</p>
+      <div class="otp-box">
+        <div class="otp-code">${otp}</div>
+        <div class="otp-label">⏱ Valid for 10 minutes</div>
+      </div>
+      <p style="font-size:13px;color:#94a3b8">If you did not request this, ignore this email.</p>
+    `),
   });
 };
 
 exports.sendOTPEmail = async (user, otp) => {
-  const html = baseTemplate(`
-    <p>Hi <strong>${user.name}</strong>,</p>
-    <p>Your Inventra login verification code:</p>
-    <div class="otp-box">
-      <div class="otp-code">${otp}</div>
-      <div class="otp-label">⏱ Valid for 10 minutes</div>
-    </div>
-    <p style="font-size:13px;color:#94a3b8;">Never share this code with anyone.</p>
-  `);
   await sendMail({
     to: user.email,
     subject: `${otp} — Your Inventra login code`,
-    html,
+    html: baseTemplate(`
+      <p>Hi <strong>${user.name}</strong>,</p>
+      <p>Your two-factor authentication code:</p>
+      <div class="otp-box">
+        <div class="otp-code">${otp}</div>
+        <div class="otp-label">⏱ Valid for 10 minutes</div>
+      </div>
+      <p style="font-size:13px;color:#94a3b8">Never share this code with anyone.</p>
+    `),
   });
 };
 
 exports.sendVerificationEmail = async (user, token) => {
   const url = `${process.env.CLIENT_URL}/verify-email?token=${token}`;
-  const html = baseTemplate(`
-    <p>Hi <strong>${user.name}</strong>,</p>
-    <p>Click below to verify your Inventra account:</p>
-    <p><a href="${url}" class="btn">✓ Verify Email</a></p>
-    <hr>
-    <p style="font-size:12px;color:#94a3b8;">Link expires in 24 hours.</p>
-  `);
-  await sendMail({ to: user.email, subject: 'Verify your Inventra account', html });
+  await sendMail({
+    to: user.email,
+    subject: 'Verify your Inventra account',
+    html: baseTemplate(`
+      <p>Hi <strong>${user.name}</strong>,</p>
+      <p>Click below to verify your Inventra account:</p>
+      <p><a href="${url}" class="btn">✓ Verify Email</a></p>
+      <hr>
+      <p style="font-size:12px;color:#94a3b8">Link expires in 24 hours.</p>
+    `),
+  });
 };
 
 exports.sendPasswordResetEmail = async (user, token) => {
   const url = `${process.env.CLIENT_URL}/reset-password/${token}`;
-  const html = baseTemplate(`
-    <p>Hi <strong>${user.name}</strong>,</p>
-    <p>Reset your Inventra password:</p>
-    <p><a href="${url}" class="btn">🔒 Reset Password</a></p>
-    <hr>
-    <p style="font-size:12px;color:#94a3b8;">Expires in 10 minutes. Ignore if you didn't request this.</p>
-  `);
-  await sendMail({ to: user.email, subject: 'Reset your Inventra password', html });
+  await sendMail({
+    to: user.email,
+    subject: 'Reset your Inventra password',
+    html: baseTemplate(`
+      <p>Hi <strong>${user.name}</strong>,</p>
+      <p>Reset your password by clicking below:</p>
+      <p><a href="${url}" class="btn">🔒 Reset Password</a></p>
+      <hr>
+      <p style="font-size:12px;color:#94a3b8">Expires in 10 minutes. Ignore if you did not request this.</p>
+    `),
+  });
 };
 
 exports.sendLowStockAlert = async (recipients, products) => {
-  const rows = products.map(p =>
-    `<tr>
+  const rows = products.map(p => `
+    <tr>
       <td style="padding:8px;border-bottom:1px solid #e2e8f0">${p.name}</td>
       <td style="padding:8px;border-bottom:1px solid #e2e8f0;font-family:monospace">${p.sku}</td>
       <td style="padding:8px;border-bottom:1px solid #e2e8f0;color:#ef4444;font-weight:bold">${p.quantity}</td>
       <td style="padding:8px;border-bottom:1px solid #e2e8f0">${p.minStockLevel}</td>
-    </tr>`
-  ).join('');
+    </tr>`).join('');
 
   const html = baseTemplate(`
     <p>⚠️ <strong>Low Stock Alert</strong></p>
-    <p>These products are below minimum stock levels:</p>
+    <p>These products need attention:</p>
     <table style="width:100%;border-collapse:collapse;margin-top:12px;font-size:13px">
       <thead><tr style="background:#f8fafc">
         <th style="padding:8px;text-align:left;color:#64748b;font-size:11px">PRODUCT</th>
@@ -158,10 +161,6 @@ exports.sendLowStockAlert = async (recipients, products) => {
   `);
 
   for (const email of recipients) {
-    await sendMail({
-      to: email,
-      subject: `⚠️ Low Stock Alert — ${products.length} item(s)`,
-      html,
-    });
+    await sendMail({ to: email, subject: `⚠️ Low Stock Alert — ${products.length} item(s)`, html });
   }
 };
