@@ -1,36 +1,28 @@
 const nodemailer = require('nodemailer');
 const logger = require('../utils/logger');
 
-
-const createTransporter = () => {
-  return nodemailer.createTransport({
-    service: 'gmail',          
-    auth: {
-      user: process.env.SMTP_USER,   
-      pass: process.env.SMTP_PASS,  
-    },
-  });
-};
+// ── Transporter — works with Brevo, Gmail, any SMTP ──
+const createTransporter = () => nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: Number(process.env.SMTP_PORT) || 587,
+  secure: false,   // false for port 587 (STARTTLS)
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+  connectionTimeout: 15000,
+  greetingTimeout: 15000,
+  socketTimeout: 15000,
+});
 
 const FROM = process.env.EMAIL_FROM || `Inventra <${process.env.SMTP_USER}>`;
 
 // ── Core send ──
 const sendMail = async ({ to, subject, html }) => {
-  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-    logger.error('SMTP_USER or SMTP_PASS not set');
-    throw new Error('Email not configured. Set SMTP_USER and SMTP_PASS.');
-  }
-
   const transporter = createTransporter();
-
-  try {
-    const info = await transporter.sendMail({ from: FROM, to, subject, html });
-    logger.info(`Email sent to ${to} | MessageId: ${info.messageId}`);
-    return info;
-  } catch (err) {
-    logger.error(`Email failed to ${to}: ${err.message}`);
-    throw err;
-  }
+  const info = await transporter.sendMail({ from: FROM, to, subject, html });
+  logger.info(`Email sent to ${to} | MessageId: ${info.messageId}`);
+  return info;
 };
 
 // ── HTML Template ──
