@@ -19,8 +19,15 @@ export default function ProductModal({ product, onClose, onSuccess }: Props) {
   }, [product, reset]);
 
   const mutation = useMutation({
-    mutationFn: (data: any) => product ? productApi.update(product._id, data) : productApi.create(data),
+    mutationFn: (data: any) => {
+      // ✅ Fix: Remove empty barcode and supplier so MongoDB unique index doesn't conflict
+      const cleanData = { ...data };
+      if (!cleanData.barcode || cleanData.barcode.trim() === '') delete cleanData.barcode;
+      if (!cleanData.supplier || cleanData.supplier === '') delete cleanData.supplier;
+      return product ? productApi.update(product._id, cleanData) : productApi.create(cleanData);
+    },
     onSuccess: () => { toast.success(product ? 'Product updated.' : 'Product created.'); onSuccess(); },
+    onError: (err: any) => { toast.error(err?.response?.data?.message || 'Failed to save product.'); },
   });
 
   return (
@@ -45,8 +52,8 @@ export default function ProductModal({ product, onClose, onSuccess }: Props) {
               {(errors as any).name && <p className="mt-1 text-xs text-red-500">{(errors as any).name.message}</p>}
             </div>
             {[
-              { name: 'sku',      label: 'SKU',           required: true,  placeholder: 'MBP-14-M3' },
-              { name: 'barcode',  label: 'Barcode',        required: false, placeholder: '1234567890' },
+              { name: 'sku',     label: 'SKU',     required: true,  placeholder: 'MBP-14-M3' },
+              { name: 'barcode', label: 'Barcode', required: false, placeholder: 'Optional' },
             ].map(({ name, label, required, placeholder }) => (
               <div key={name}>
                 <label className="label">{label}{required && <span className="text-red-500"> *</span>}</label>
@@ -56,12 +63,12 @@ export default function ProductModal({ product, onClose, onSuccess }: Props) {
               </div>
             ))}
             {[
-              { name: 'costPrice',    label: 'Cost Price (₹)',   placeholder: '999.00' },
-              { name: 'sellingPrice', label: 'Selling Price (₹)', placeholder: '1299.00' },
-              { name: 'quantity',     label: 'Initial Quantity', placeholder: '0' },
-              { name: 'minStockLevel', label: 'Min Stock Level', placeholder: '10' },
-              { name: 'reorderPoint', label: 'Reorder Point',    placeholder: '20' },
-              { name: 'maxStockLevel', label: 'Max Stock Level', placeholder: '500' },
+              { name: 'costPrice',     label: 'Cost Price (₹)',    placeholder: '999.00' },
+              { name: 'sellingPrice',  label: 'Selling Price (₹)', placeholder: '1299.00' },
+              { name: 'quantity',      label: 'Initial Quantity',  placeholder: '0' },
+              { name: 'minStockLevel', label: 'Min Stock Level',   placeholder: '10' },
+              { name: 'reorderPoint',  label: 'Reorder Point',     placeholder: '20' },
+              { name: 'maxStockLevel', label: 'Max Stock Level',   placeholder: '500' },
             ].map(({ name, label, placeholder }) => (
               <div key={name}>
                 <label className="label">{label}</label>
