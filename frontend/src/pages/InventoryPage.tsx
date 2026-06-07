@@ -160,8 +160,8 @@ export default function InventoryPage() {
                       {p.quantity} <span className="text-gray-400 font-normal text-xs">{p.unit}</span>
                     </span>
                   </td>
-                  <td className="text-gray-500">${p.costPrice?.toFixed(2)}</td>
-                  <td className="text-gray-800 font-medium">${p.sellingPrice?.toFixed(2)}</td>
+                  <td className="text-gray-500">₹{p.costPrice?.toFixed(2)}</td>
+                  <td className="text-gray-800 font-medium">₹{p.sellingPrice?.toFixed(2)}</td>
                   <td>{stockStatusBadge(p.quantity, p.minStockLevel)}</td>
                   <td>
                     <div className="flex items-center gap-1">
