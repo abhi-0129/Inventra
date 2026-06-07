@@ -1,31 +1,39 @@
-const nodemailer = require('nodemailer');
 const logger = require('../utils/logger');
 
-// ── Transporter — works with Brevo, Gmail, any SMTP ──
-const createTransporter = () => nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT) || 587,
-  secure: false,   // false for port 587 (STARTTLS)
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-  connectionTimeout: 15000,
-  greetingTimeout: 15000,
-  socketTimeout: 15000,
-});
-
-const FROM = process.env.EMAIL_FROM || `Inventra <${process.env.SMTP_USER}>`;
-
-// ── Core send ──
 const sendMail = async ({ to, subject, html }) => {
-  const transporter = createTransporter();
-  const info = await transporter.sendMail({ from: FROM, to, subject, html });
-  logger.info(`Email sent to ${to} | MessageId: ${info.messageId}`);
-  return info;
+  const apiKey = process.env.BREVO_API_KEY || process.env.RESEND_API_KEY;
+  
+  if (!apiKey) throw new Error('BREVO_API_KEY not set');
+
+  const from = process.env.EMAIL_FROM || 'Inventra <abhaysharma.it25@gmail.com>';
+  
+  // Use Brevo REST API directly — no SMTP, no ports, just HTTPS
+  const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'accept': 'application/json',
+      'api-key': apiKey,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      sender: { name: 'Inventra', email: process.env.SMTP_USER || 'abhaysharma.it25@gmail.com' },
+      to: [{ email: to }],
+      subject,
+      htmlContent: html,
+    }),
+  });
+
+  const data = await response.json();
+  
+  if (!response.ok) {
+    logger.error('Brevo API error:', JSON.stringify(data));
+    throw new Error(data.message || 'Failed to send email via Brevo');
+  }
+
+  logger.info(`Email sent via Brevo API to ${to} | messageId: ${data.messageId}`);
+  return data;
 };
 
-// ── HTML Template ──
 const baseTemplate = (content) => `<!DOCTYPE html>
 <html>
 <head>
@@ -64,8 +72,6 @@ const baseTemplate = (content) => `<!DOCTYPE html>
   </div>
 </body>
 </html>`;
-
-// ── Email functions ──
 
 exports.sendEmailVerificationOTP = async (user, otp) => {
   await sendMail({
@@ -124,7 +130,7 @@ exports.sendPasswordResetEmail = async (user, token) => {
       <p>Reset your password by clicking below:</p>
       <p><a href="${url}" class="btn">🔒 Reset Password</a></p>
       <hr>
-      <p style="font-size:12px;color:#94a3b8">Expires in 10 minutes. Ignore if you did not request this.</p>
+      <p style="font-size:12px;color:#94a3b8">Expires in 10 minutes.</p>
     `),
   });
 };
@@ -140,7 +146,6 @@ exports.sendLowStockAlert = async (recipients, products) => {
 
   const html = baseTemplate(`
     <p>⚠️ <strong>Low Stock Alert</strong></p>
-    <p>These products need attention:</p>
     <table style="width:100%;border-collapse:collapse;margin-top:12px;font-size:13px">
       <thead><tr style="background:#f8fafc">
         <th style="padding:8px;text-align:left;color:#64748b;font-size:11px">PRODUCT</th>
@@ -151,7 +156,6 @@ exports.sendLowStockAlert = async (recipients, products) => {
       <tbody>${rows}</tbody>
     </table>
   `);
-
   for (const email of recipients) {
     await sendMail({ to: email, subject: `⚠️ Low Stock Alert — ${products.length} item(s)`, html });
   }
