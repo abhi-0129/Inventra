@@ -27,25 +27,23 @@ exports.sendEmailOTP = catchAsync(async (req, res, next) => {
   const existingUser = await User.findOne({ email });
   if (existingUser) return next(new AppError('An account with this email already exists.', 409));
 
-  // Generate 6-digit OTP
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  const expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+  const expiry = new Date(Date.now() + 10 * 60 * 1000);
 
-  // Store OTP temporarily in a pending collection or as a temp token
-  // We use a signed JWT to store OTP securely
   const otpToken = jwt.sign(
     { email, otp, expiry: expiry.getTime() },
     process.env.JWT_SECRET,
     { expiresIn: '10m' }
   );
 
-  // Send OTP email
   try {
     await emailService.sendEmailVerificationOTP({ email }, otp);
     logger.info(`Email OTP sent to ${email}`);
   } catch (err) {
-    logger.error('OTP email failed:', err.message);
-    return next(new AppError('Failed to send OTP. Please check your email and try again.', 500));
+    // ✅ Return actual error message so we can debug
+    const errMsg = err.message || 'Unknown email error';
+    logger.error('OTP email failed FULL:', errMsg);
+    return next(new AppError(`Email failed: ${errMsg}`, 500));
   }
 
   res.status(200).json({
@@ -61,7 +59,6 @@ exports.register = catchAsync(async (req, res, next) => {
 
   if (!otpToken) return next(new AppError('OTP verification required. Please verify your email first.', 400));
 
-  // Verify OTP token
   let decoded;
   try {
     decoded = jwt.verify(otpToken, process.env.JWT_SECRET);
@@ -82,7 +79,7 @@ exports.register = catchAsync(async (req, res, next) => {
   const user = await User.create({
     name, email, password, phone,
     role: assignedRole,
-    isEmailVerified: true, // Already verified via OTP
+    isEmailVerified: true,
   });
 
   logger.info(`New user registered: ${email} as ${assignedRole}`);

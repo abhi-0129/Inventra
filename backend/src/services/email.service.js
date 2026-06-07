@@ -1,13 +1,24 @@
 const logger = require('../utils/logger');
 
 const sendMail = async ({ to, subject, html }) => {
-  const apiKey = process.env.BREVO_API_KEY || process.env.RESEND_API_KEY;
-  
-  if (!apiKey) throw new Error('BREVO_API_KEY not set');
+  const apiKey = process.env.BREVO_API_KEY;
 
-  const from = process.env.EMAIL_FROM || 'Inventra <abhaysharma.it25@gmail.com>';
-  
-  // Use Brevo REST API directly — no SMTP, no ports, just HTTPS
+  if (!apiKey) {
+    throw new Error('BREVO_API_KEY is not set in environment variables');
+  }
+
+  const senderEmail = process.env.SMTP_USER || 'abhaysharma.it25@gmail.com';
+  const senderName = 'Inventra';
+
+  const payload = {
+    sender: { name: senderName, email: senderEmail },
+    to: [{ email: to }],
+    subject,
+    htmlContent: html,
+  };
+
+  logger.info(`Sending email to ${to} via Brevo API...`);
+
   const response = await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
     headers: {
@@ -15,22 +26,18 @@ const sendMail = async ({ to, subject, html }) => {
       'api-key': apiKey,
       'content-type': 'application/json',
     },
-    body: JSON.stringify({
-      sender: { name: 'Inventra', email: process.env.SMTP_USER || 'abhaysharma.it25@gmail.com' },
-      to: [{ email: to }],
-      subject,
-      htmlContent: html,
-    }),
+    body: JSON.stringify(payload),
   });
 
   const data = await response.json();
-  
+
   if (!response.ok) {
-    logger.error('Brevo API error:', JSON.stringify(data));
-    throw new Error(data.message || 'Failed to send email via Brevo');
+    const errorMsg = JSON.stringify(data);
+    logger.error(`Brevo API failed [${response.status}]: ${errorMsg}`);
+    throw new Error(`Brevo error ${response.status}: ${errorMsg}`);
   }
 
-  logger.info(`Email sent via Brevo API to ${to} | messageId: ${data.messageId}`);
+  logger.info(`Email sent to ${to} | messageId: ${data.messageId}`);
   return data;
 };
 
